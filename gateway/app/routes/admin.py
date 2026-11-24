@@ -4,8 +4,46 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..models import ReleaseRequest
+from ..replay import ReplayRequest, replay
 
 router = APIRouter()
+
+
+@router.post("/api/policy/preview")
+def preview(payload: ReplayRequest, request: Request):
+    rt = request.app.state.runtime
+    try:
+        active = rt.control.evaluate("policy-preview", "system")["policy"]
+    except Exception as exc:
+        raise HTTPException(503, "Active Flagsmith policy unavailable") from exc
+    baseline = replay(payload.calls, active)
+    candidate = replay(payload.calls, payload.candidate_policy)
+    return {
+        "mode": "dry_run",
+        "scope": "tool-loop detection only",
+        "active_policy": active.model_dump(),
+        "candidate_policy": payload.candidate_policy.model_dump(),
+        "baseline": baseline,
+        "candidate": candidate,
+        "changed_decisions": sum(
+            a["blocked"] != b["blocked"] for a, b in zip(baseline["decisions"], candidate["decisions"])
+        ),
+    }
+
+
+@router.get("/api/incidents")
+def incidents(request: Request):
+    rt = request.app.state.runtime
+    kinds = {"TRIPPED", "QUARANTINED", "RELEASED", "GLOBAL_KILL", "SYNC_ERROR"}
+    return {
+        "retention": "in_memory_last_1000_events",
+        "durable": False,
+        "events": [
+            {k: e[k] for k in ("id", "timestamp", "type", "agent_id")}
+            for e in list(rt.telemetry.events)
+            if e["type"] in kinds
+        ],
+    }
 
 
 @router.get("/health")

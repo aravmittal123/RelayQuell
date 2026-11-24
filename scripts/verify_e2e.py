@@ -251,6 +251,27 @@ def main():
         "Inventory restored after global kill verification",
         tool("e2e_unaffected", {"nonce": uuid.uuid4().hex}, "query_inventory").status_code == 200,
     )
+    preview_members = members()
+    trace = [
+        {"agent_id": "preview-only", "at_seconds": i, "tool": {"name": "charge_card", "arguments": {}}}
+        for i in range(3)
+    ]
+    rehearsal = gateway.post(
+        "/api/policy/preview", json={"calls": trace, "candidate_policy": {"max_identical_calls": 4}}
+    )
+    check(
+        "Policy rehearsal compares live and candidate loop decisions without persistence",
+        rehearsal.status_code == 200
+        and rehearsal.json()["changed_decisions"] == 1
+        and members() == preview_members,
+    )
+    incident_index = gateway.get("/api/incidents")
+    check(
+        "Incident index excludes tool arguments and explicitly declares memory retention",
+        incident_index.status_code == 200
+        and not incident_index.json()["durable"]
+        and all(set(e) == {"id", "timestamp", "type", "agent_id"} for e in incident_index.json()["events"]),
+    )
     samples = []
     with closing(
         Flagsmith(
@@ -283,9 +304,7 @@ def main():
     )
     port = os.getenv("DASHBOARD_PORT", dotenv_values(ROOT / ".env").get("DASHBOARD_PORT", "3000"))
     dashboard = httpx.get(f"http://localhost:{port}", timeout=30)
-    check(
-        "AgentBreaker dashboard responds", dashboard.status_code == 200 and "AgentBreaker" in dashboard.text
-    )
+    check("AgentBreaker dashboard responds", dashboard.status_code == 200 and "RelayQuell" in dashboard.text)
     (ROOT / "evidence" / "e2e-results.json").write_text(
         json.dumps(
             {

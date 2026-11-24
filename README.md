@@ -1,14 +1,18 @@
-# AgentBreaker
+# RelayQuell
+
+[Product positioning and policy rehearsal](docs/PRODUCT.md)
+
+![RelayQuell product overview](evidence/relayquell-home.jpg)
 
 Start here: [configuration and integration guide](docs/CONFIGURATION.md). It explains which settings you change, which keys bootstrap generates, how to connect an existing agent, and the current deployment limits.
 
-**Let agents run. Keep control.** A self-hosted AI agent and MCP runtime gateway that detects runaway behavior, quarantines the offending agent, and routes it to a cheaper model while healthy agents keep working. Flagsmith is the authoritative control plane, with official Python SDK local evaluation on every permitted request.
+**Runtime control for autonomous agents.** A self-hosted AI agent and MCP runtime gateway that detects runaway behavior, quarantines the offending agent, and routes it to a cheaper model while healthy agents keep working. Flagsmith is the authoritative control plane, with official Python SDK local evaluation on every permitted request.
 
-Built for [Toggle Wars — Track 3: Build on Open Source Flagsmith](https://www.wemakedevs.org/hackathons/flagsmith). MIT licensed. No paid API keys required.
+Built for [Toggle Wars â€” Track 3: Build on Open Source Flagsmith](https://www.wemakedevs.org/hackathons/flagsmith). MIT licensed. No paid API keys required.
 
 **Release status: tested local prototype.** The gateway uses real Flagsmith enforcement. It currently supports two named tools and non-streaming LLM calls. Authentication, generic MCP transport, and shared state for replicas are not implemented; do not expose this release's admin API publicly.
 
-## Three-step quickstart
+## Quickstart
 
 Prerequisites: Docker Desktop / Docker Compose v2.24+, Python 3.13+, Node 22+ for host dashboard checks, and Make (or use the PowerShell commands below).
 
@@ -16,7 +20,7 @@ Prerequisites: Docker Desktop / Docker Compose v2.24+, Python 3.13+, Node 22+ fo
 2. Start and provision the stack: `make up`.
 3. Run the competing agents: `make demo`. Open the [dashboard](http://localhost:3000), [gateway API docs](http://localhost:8085/docs), and [Flagsmith](http://localhost:8000).
 
-Run commands from `agentbreaker/`. `make test` runs unit tests and live verification. First startup downloads images, builds the dashboard, and applies Flagsmith database migrations; allow several minutes.
+Run commands from the repository root. `make test` runs unit tests and live verification. First startup downloads images, builds the dashboard, and applies Flagsmith database migrations; allow several minutes.
 
 If port 3000 is in use, set `DASHBOARD_PORT=3001` in `.env` and open `http://localhost:3001`. This machine uses that override to preserve the existing app on 3000. The gateway allows both local dashboard origins by default.
 
@@ -35,6 +39,14 @@ python scripts/verify_e2e.py
 Local Flagsmith login: `admin@agentbreaker.local` / `AgentBreakerDemo123!`. Override both with `FLAGSMITH_ADMIN_EMAIL` and `FLAGSMITH_ADMIN_PASSWORD` in an ignored `.env`. The requested demo password resembles its email, so the current image rejects REST registration. Bootstrap attempts REST first, then creates the account with Django inside this Compose service. Password validators remain enabled. All organisation, project, environment, key, flag, segment, override, and health-provider operations use live REST APIs.
 
 Bootstrap is idempotent: named resources are reused, current quarantine and operator policies are preserved, and saved master secrets are validated before reuse. If `.env.runtime` is lost, an orphaned gateway master key is revoked and replaced. Bootstrap checks the live schema at `/api/v1/swagger.json`, which the current image advertises from `/api/v1/docs/`. It writes resolved credentials atomically to ignored `.env.runtime`; never publish this file.
+
+## Why this project
+
+RelayQuell contains operational failures during agent execution. It is distinct from red-team scanners that probe prompt injection or jailbreak vulnerabilities. The gateway isolates individual agents and uses self-hosted Flagsmith for persistent control and recovery.
+
+The console is at `/console`; `/` is the product overview. `POST /api/policy/preview` compares the active policy with a candidate against up to 1,000 chronological tool calls, without upstream execution or flag writes. It currently simulates tool-loop behavior only. `GET /api/incidents` exports a bounded session incident index without tool arguments; it is not a durable audit log.
+
+Legacy `agentbreaker_quarantined` segment names, environment variables, Docker project name, account defaults and `X-AgentBreaker-*` response headers remain compatible so existing deployments keep working.
 
 ## Architecture
 
@@ -73,7 +85,7 @@ flowchart LR
 | `mcp_tool_query_inventory` | Independently controlled inventory tool kill |
 | `llm_model_route` | JSON model, max token, tier, optional prompt, and fallback model config |
 | `breaker_policy_config` | Live validated policy: loop thresholds, windows, spend, token and error caps |
-| `agentbreaker_quarantined` | `ALL → ANY → agent_id IN comma-separated IDs` |
+| `agentbreaker_quarantined` | `ALL â†’ ANY â†’ agent_id IN comma-separated IDs` |
 
 `llm_model_route` defaults to `{"model":"gpt-4o","max_tokens":1024,"tier":"primary"}`. Its multivariate fallback option starts at zero percent. Increase the allocation in Flagsmith to canary a model without a deployment. Quarantine overrides select `gpt-4o-mini`, 256 max tokens, fallback tier. Optional `prompt` prepends a system message, and `fallback_model` controls retry routing. Unknown policy fields and invalid thresholds fail closed.
 

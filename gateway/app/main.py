@@ -116,7 +116,7 @@ def create_app(settings=None, control=None, transport=None):
                 if runtime.control.sdk:
                     await asyncio.to_thread(runtime.control.sdk.close)
 
-    app = FastAPI(title="AgentBreaker", lifespan=lifespan)
+    app = FastAPI(title="RelayQuell", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

@@ -42,7 +42,7 @@ def test_segment_write_and_incident_fallback():
             return httpx.Response(200, json=segment)
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
-            c = ControlPlane(Settings(flagsmith_master_api_key="secret"), http)
+            c = ControlPlane(Settings(_env_file=None, flagsmith_master_api_key="secret"), http)
             c.sdk = SimpleNamespace(last_refresh=time.time(), _local_evaluation=True)
             c.sdk.update_environment = lambda: setattr(c.sdk, "last_refresh", time.time() + 1)
             await c.quarantine("new", True)
@@ -61,7 +61,12 @@ def test_management_failure_is_not_swallowed():
         async with httpx.AsyncClient(
             transport=httpx.MockTransport(lambda r: httpx.Response(403, json={"detail": "denied"}))
         ) as http:
-            c = ControlPlane(Settings(), http)
+            c = ControlPlane(
+                Settings(
+                    _env_file=None,
+                ),
+                http,
+            )
             with pytest.raises(httpx.HTTPStatusError):
                 await c.quarantine("a", True)
 
@@ -69,7 +74,12 @@ def test_management_failure_is_not_swallowed():
 
 
 def test_stale_sdk_never_falls_back_to_remote_evaluation():
-    c = ControlPlane(Settings(), None)
+    c = ControlPlane(
+        Settings(
+            _env_file=None,
+        ),
+        None,
+    )
     c.sdk = SimpleNamespace(last_refresh=0, _local_evaluation=True, get_identity_flags=Mock())
     with pytest.raises(RuntimeError):
         c.evaluate("a", "t")
@@ -85,7 +95,7 @@ def test_global_kill_targets_only_environment_state():
             return httpx.Response(200, json=[{"id": 12, "feature": 1, "feature_segment": None}])
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
-            c = ControlPlane(Settings(flagsmith_env_key="prod"), http)
+            c = ControlPlane(Settings(_env_file=None, flagsmith_env_key="prod"), http)
             c.sdk = SimpleNamespace(last_refresh=time.time(), _local_evaluation=True)
             c.sdk.update_environment = lambda: setattr(c.sdk, "last_refresh", time.time() + 1)
             await c.kill("charge_card")

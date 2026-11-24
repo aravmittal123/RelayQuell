@@ -77,7 +77,13 @@ def fixture():
             },
         )
 
-    app = create_app(Settings(), control=control, transport=httpx.MockTransport(handle))
+    app = create_app(
+        Settings(
+            _env_file=None,
+        ),
+        control=control,
+        transport=httpx.MockTransport(handle),
+    )
     with TestClient(app) as client:
         yield SimpleNamespace(client=client, control=control, requests=requests, app=app)
 
@@ -170,7 +176,14 @@ def test_validation_and_admin_endpoints(fixture):
 def test_restart_restores_persisted_quarantine():
     control = FakeControl()
     control.persisted.add("a")
-    with TestClient(create_app(Settings(), control=control)) as client:
+    with TestClient(
+        create_app(
+            Settings(
+                _env_file=None,
+            ),
+            control=control,
+        )
+    ) as client:
         response = client.post(
             "/mcp",
             headers={"X-Agent-Id": "a"},
@@ -202,3 +215,18 @@ def test_non_blocking_budget_policy_downgrades_to_fallback(fixture):
     assert response.status_code == 200
     assert response.headers["X-AgentBreaker-Tier"] == "fallback"
     assert tool(f).status_code == 429
+
+
+def test_policy_preview_has_no_live_side_effects(fixture):
+    calls = [
+        {"agent_id": "loop", "at_seconds": i, "tool": {"name": "charge_card", "arguments": {}}}
+        for i in range(3)
+    ]
+    result = fixture.client.post(
+        "/api/policy/preview", json={"calls": calls, "candidate_policy": {"max_identical_calls": 4}}
+    )
+    assert result.status_code == 200
+    assert result.json()["changed_decisions"] == 1
+    assert not fixture.control.persisted
+    assert not fixture.requests
+    assert fixture.client.get("/api/incidents").json()["events"] == []

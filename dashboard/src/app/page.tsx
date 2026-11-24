@@ -1,66 +1,19 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { Activity, Shield, Zap, Radio, ExternalLink, Unlock, Terminal, RefreshCw } from 'lucide-react';
-
-const API = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:8085';
-type Event = {id:number;timestamp:number;type:string;agent_id:string;detail:string;data:Record<string,unknown>};
-type State = {total_calls:number;blocked_calls:number;estimated_usd_saved:number;avg_eval_ms:number;quarantined_agents:Record<string,{reason:string;synced:boolean}>;flags:Record<string,unknown>;flagsmith_connected:boolean};
-const initial: State = {total_calls:0,blocked_calls:0,estimated_usd_saved:0,avg_eval_ms:0,quarantined_agents:{},flags:{},flagsmith_connected:false};
-
-export default function Page() {
-  const [state,setState] = useState<State>(initial);
-  const [events,setEvents] = useState<Event[]>([]);
-  const [connected,setConnected] = useState(false);
-  const [busy,setBusy] = useState('');
-  const [error,setError] = useState('');
-  async function reload() {
-    const response = await fetch(`${API}/api/state`);
-    if (!response.ok) throw new Error(`State HTTP ${response.status}`);
-    setState(await response.json());
-  }
-  useEffect(()=>{
-    let live = true;
-    const poll = () => reload().catch(e=>{if(live) setError(String(e));});
-    poll();
-    const timer=setInterval(poll,2000);
-    const source=new EventSource(`${API}/api/events`);
-    source.onopen=()=>setConnected(true);
-    source.onerror=()=>setConnected(false);
-    source.onmessage=e=>{const event:Event=JSON.parse(e.data);setEvents(old=>[event,...old.filter(x=>x.id!==event.id)].slice(0,160));};
-    return ()=>{live=false;clearInterval(timer);source.close();};
-  },[]);
-  async function post(path:string,body:unknown) {
-    const response=await fetch(`${API}${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-    return response;
-  }
-  async function action(name:string,run:()=>Promise<unknown>) {
-    setBusy(name);setError('');
-    try {await run();await reload();} catch(e) {setError(String(e));} finally {setBusy('');}
-  }
-  async function tool(agent:string,args:Record<string,unknown>) {
-    return fetch(`${API}/mcp`,{method:'POST',headers:{'Content-Type':'application/json','X-Agent-Id':agent},body:JSON.stringify({jsonrpc:'2.0',id:Date.now(),method:'tools/call',params:{name:'charge_card',arguments:args}})});
-  }
-  async function demo(runaway:boolean) {
-    const agent=runaway?'agent_runaway':'agent_healthy';
-    if(runaway) await post('/api/quarantine/release',{agent_id:agent});
-    for(let i=0;i<(runaway?5:1);i++) {
-      const response=await tool(agent,{order_id:runaway?'loop-order':crypto.randomUUID(),amount:5});
-      if(!response.ok && response.status!==429) throw new Error(`Tool HTTP ${response.status}`);
-    }
-    const response=await fetch(`${API}/v1/chat/completions`,{method:'POST',headers:{'Content-Type':'application/json','X-Agent-Id':agent},body:JSON.stringify({messages:[{role:'user',content:'Report status'}]})});
-    if(!response.ok) throw new Error(`LLM HTTP ${response.status}`);
-  }
-  const cards=[['Total intercepted calls',state.total_calls,Activity],['Blocked calls',state.blocked_calls,Shield],['Quarantined agents',Object.keys(state.quarantined_agents).length,Zap],['Estimated spend protected',`$${state.estimated_usd_saved.toFixed(4)}`,Shield]] as const;
-  return <main>
-    <header><a className="wordmark" href="/"><Shield size={28}/><span>AGENT<span className="cyan">BREAKER</span></span></a><div className="header-right"><span className={connected?'live':'offline'}><Radio size={15}/> {connected?'TELEMETRY LIVE':'RECONNECTING'}</span><a href="http://localhost:8000" target="_blank" rel="noreferrer">Self-hosted Flagsmith <ExternalLink size={14}/></a></div></header>
-    <section className="intro"><div><p className="eyebrow">RUNTIME DEFENSE / CONTROL PLANE</p><h1>Let agents run.<br/><span>Keep control.</span></h1><p className="subtitle">Detect the loop. Isolate the agent. Protect the rest.</p></div><div className="control"><span className="eyebrow">FLAGSMITH LOCAL EVALUATION</span><strong className="cyan">{state.avg_eval_ms.toFixed(3)}<small> ms</small></strong><span className={state.flagsmith_connected?'live':'offline'}>{state.flagsmith_connected?'Environment document connected':'Control plane unavailable'}</span><span className="muted">5-second polling · immediate refresh on trip</span></div></section>
-    <section className="kpis">{cards.map(([label,value,Icon])=><article className="card" key={label}><div><span>{label}</span><Icon size={19}/></div><strong>{value}</strong></article>)}</section>
-    <section className="trigger"><div><Terminal size={19}/><b>Run a live experiment</b><span className="muted">Zero API keys. Real control plane.</span></div><div className="buttons"><button disabled={!!busy} onClick={()=>action('healthy',()=>demo(false))}>Healthy call</button><button className="danger" disabled={!!busy} onClick={()=>action('runaway',()=>demo(true))}><Zap size={15}/> Trigger doom-loop</button><button disabled={!!busy} onClick={()=>action('refresh',()=>post('/api/policy/refresh',{}))}><RefreshCw size={15}/> Refresh policy</button></div></section>
-    {busy&&<p role="status" className="cyan">Running {busy}…</p>}{error&&<p role="alert" className="error">{error}</p>}
-    <section className="monitors">{['agent_healthy','agent_runaway'].map((agent,i)=><article className={`monitor ${i?'runaway':'healthy'}`} key={agent}><div className="monitor-title"><div><span className="eyebrow">{i?'BEHAVIORAL CONTAINMENT':'UNINTERRUPTED TRAFFIC'}</span><h2>{i?'Runaway agent':'Healthy agent'}</h2><code>{agent}</code></div><span className={state.quarantined_agents[agent]?'badge red':'badge green'}>{state.quarantined_agents[agent]?'CIRCUIT OPEN':'MONITORING'}</span></div><div className="feed" aria-live="polite">{events.filter(e=>e.agent_id===agent).map(e=><div className={`event ${['BLOCKED','TRIPPED','UPSTREAM_ERROR'].includes(e.type)?'bad':''}`} key={e.id}><time>{new Date(e.timestamp*1000).toLocaleTimeString()}</time><b>{e.type}</b><span>{e.detail}</span>{e.data.arguments!==undefined&&<code>{JSON.stringify(e.data.arguments)}</code>}</div>)}{!events.some(e=>e.agent_id===agent)&&<p className="empty">Awaiting traffic. Use the experiment controls above.</p>}</div></article>)}</section>
-    <section className="panel"><div className="panel-title"><h2><Shield size={20}/> Quarantine registry</h2><span className="muted">Agent isolation · persisted in Flagsmith</span></div><div className="table-wrap"><table><thead><tr><th>Agent identifier</th><th>Trip reason</th><th>Control plane sync</th><th>Recovery</th></tr></thead><tbody>{Object.entries(state.quarantined_agents).map(([agent,item])=><tr key={agent}><td><code>{agent}</code></td><td>{item.reason.replaceAll('_',' ')}</td><td><span className={item.synced?'badge green':'badge red'}>{item.synced?'SYNCED':'PENDING / RETRYING'}</span></td><td><button disabled={!!busy} onClick={()=>action('release',()=>post('/api/quarantine/release',{agent_id:agent}))}><Unlock size={14}/> Release quarantine</button></td></tr>)}</tbody></table>{!Object.keys(state.quarantined_agents).length&&<p className="empty">No quarantined agents. All circuits are clear.</p>}</div></section>
-    <details className="panel policy"><summary>Live policy JSON <span className="muted">breaker_policy_config</span></summary><pre>{JSON.stringify(state.flags.policy||{},null,2)}</pre></details>
-    <footer><span>AGENTBREAKER / OPEN SOURCE RUNTIME PROTECTION</span><span>Self-hosted. Locally evaluated. Human controlled.</span></footer>
-  </main>;
+import { ArrowUpRight, ShieldCheck, Workflow, Activity, GitBranch, Terminal, LockKeyhole, Check } from 'lucide-react';
+import Link from 'next/link';
+const repo = 'https://github.com/aravmittal123/RelayQuell';
+export default function Home() {
+  return <div className="site"><nav className="site-nav"><Link href="/" className="brand"><span className="brand-symbol">r<span>q</span></span>relayquell<span className="opensource">OPEN SOURCE</span></Link><div className="nav-links"><a href="#platform">Platform</a><a href="#workflow">How it works</a><a href={`${repo}/blob/main/docs/CONFIGURATION.md`}>Documentation</a></div><Link href="/console" className="nav-cta">Open console <ArrowUpRight size={15}/></Link></nav>
+    <main className="marketing"><section className="hero"><div className="hero-copy"><p className="kicker"><span/> FLAGS IN CONTROL. AGENTS IN BOUNDS.</p><h1>Autonomy needs<br/>a <em>control plane.</em></h1><p className="hero-description">An agent stuck in a loop shouldn’t become everyone’s outage. Contain runaway tool calls, control model spend, and recover through self-hosted Flagsmith.</p><div className="hero-actions"><Link className="primary-cta" href="/console">Explore the live console <ArrowUpRight size={18}/></Link><a className="secondary-cta" href={repo}>View source</a></div><div className="hero-facts"><span><Check size={14}/> Self-hosted</span><span><Check size={14}/> MIT licensed</span><span><Check size={14}/> No paid keys to try</span></div></div>
+    <div className="system-visual" aria-label="Illustrative containment flow: healthy agent allowed, runaway agent isolated"><div className="visual-toolbar"><span className="live-dot"/> RUNTIME TOPOLOGY <span className="illustration-tag">ILLUSTRATIVE TRACE</span></div><div className="lanes"><div className="agent-node"><Activity size={18}/><span>orders-worker<strong>Healthy execution</strong></span><span className="tiny green-text">ALLOW</span></div><div className="flow-wire good-wire"/><div className="agent-node"><Workflow size={18}/><span>retry-worker<strong>Identical tool loop</strong></span><span className="tiny red-text">ISOLATE</span></div><div className="flow-wire bad-wire"/></div><div className="gateway-node"><div className="gateway-mark">rq</div><div><strong>RelayQuell</strong><span>Local policy evaluation</span></div><ShieldCheck size={22}/></div><div className="control-wire"/><div className="flagsmith-node"><GitBranch size={20}/><div><strong>Self-hosted Flagsmith</strong><span>Flags · segments · remote config</span></div><span className="tiny">CONTROL PLANE</span></div><div className="trace-card"><span>DECISION / retry-worker</span><code>3 identical calls → circuit open</code><div><i/> Quarantine one agent. Keep the rest moving.</div></div><div className="visual-foot">Tool gateway <span>→</span> Model routing <span>→</span> Operator recovery</div></div></section>
+    <section className="principles"><span>BUILT FOR TEAMS OPERATING TOOL-USING AGENTS</span><div><b>Agent platforms</b><b>Internal automation</b><b>AI infrastructure</b><b>Platform engineering</b></div></section>
+    <section id="platform" className="platform-section"><div className="section-heading"><div><p className="kicker">CONTAINMENT, NOT GUESSWORK</p><h2>Catch the behavior.<br/>Constrain the blast radius.</h2></div><p>Security testing finds weaknesses before release. Runtime controls handle the failure while your agents are working. RelayQuell focuses on that operational gap.</p></div><div className="feature-grid">{[
+      [ShieldCheck,'Agent-level isolation','Detect repeated calls and two-step cycles. Quarantine the offending identity without switching off healthy agents.'],
+      [GitBranch,'A control plane you own','Real Flagsmith flags, segment overrides and local evaluation. Change policy without deploying your gateway again.'],
+      [Workflow,'Rehearse before rollout','Compare a candidate loop policy against the active Flagsmith policy using an isolated trace replay. No upstream execution.'],
+      [Activity,'Recover with evidence','Follow live decisions, inspect quarantine sync, and release an agent after the persisted policy update succeeds.'],
+    ].map(([Icon,title,description])=>{const Glyph=Icon as typeof ShieldCheck;return <article className="feature" key={String(title)}><Glyph size={23}/><h3>{String(title)}</h3><p>{String(description)}</p></article>;})}</div></section>
+    <section id="workflow" className="workflow-section"><div><p className="kicker">ONE CLOSED CONTROL LOOP</p><h2>From abnormal behavior<br/>to a deliberate recovery.</h2><p className="section-description">Immediate local protection. Persistent control-plane state. A human decides when the agent returns.</p><a className="text-link" href={`${repo}/blob/main/README.md`}>Read the architecture <ArrowUpRight size={16}/></a></div><ol className="steps"><li><span>01</span><div><h3>Intercept & evaluate</h3><p>Route supported tool and non-streaming LLM requests through the gateway. Evaluate identity policy locally.</p></div></li><li><span>02</span><div><h3>Isolate & synchronize</h3><p>Block the runaway agent immediately, then persist quarantine to a Flagsmith segment and refresh policy.</p></div></li><li><span>03</span><div><h3>Inspect & recover</h3><p>Review the live timeline. Release quarantine only after the control-plane change is committed.</p></div></li></ol></section>
+    <section className="developer-section"><div><p className="kicker">START WITH A REPRODUCIBLE STACK</p><h2>Your infrastructure.<br/>Your operating rules.</h2><p>Run Flagsmith, PostgreSQL, gateway and console locally. Deterministic upstreams make failures reproducible before you connect real services.</p><a className="primary-cta" href={`${repo}/blob/main/docs/CONFIGURATION.md`}>Integration guide <ArrowUpRight size={17}/></a></div><div className="code-window"><div><Terminal size={16}/> QUICKSTART <span>Docker + Python</span></div><pre><code>{`git clone ${repo}.git\ncd RelayQuell\npython -m pip install -e './gateway[dev]'\npython scripts/configure.py\nmake up\n\n# Exercise the closed control loop\nmake demo`}</code></pre></div></section>
+    <section className="honest-note"><LockKeyhole size={21}/><div><strong>Open source, with an explicit operating boundary.</strong><p>Current release: single gateway worker, two supported tool schemas, non-streaming completions. Shared state, authentication and full MCP transport are not implemented. Keep admin APIs on a trusted local network.</p></div><a href={`${repo}/blob/main/docs/CONFIGURATION.md`}>Read deployment limits <ArrowUpRight size={16}/></a></section>
+    <footer className="site-footer"><Link className="brand" href="/">relayquell</Link><span>Runtime control, backed by Flagsmith.</span><div><a href={repo}>GitHub</a><Link href="/console">Console</Link><a href={`${repo}/blob/main/LICENSE`}>MIT license</a></div></footer></main></div>;
 }

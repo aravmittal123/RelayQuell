@@ -1,4 +1,4 @@
-name: AgentBreaker
+name: RelayQuell
 on: [push, pull_request]
 jobs:
   python:

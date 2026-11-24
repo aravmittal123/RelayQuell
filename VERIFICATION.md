@@ -1,4 +1,8 @@
-# AgentBreaker verification
+# RelayQuell verification
+
+## RelayQuell revision: 24 November 2026
+
+25 Python tests and 29 live Docker assertions passed. New isolated policy rehearsal and argument-free incident index were checked through HTTP against the real stack; rehearsal preserves live segment membership. Browser verification confirmed the redesigned homepage, console navigation, and the actual policy comparison result. Host TypeScript validation and both host/Docker production builds passed. All six containers are healthy. SDK evaluation measured mean 0.066 ms / p95 0.114 ms / p99 0.358 ms over 1,000 evaluations. The repository is now `aravmittal123/RelayQuell`; legacy operational identifiers remain compatible. New screenshot: `evidence/relayquell-home.jpg`.
 
 ## Reverification: 24 November 2026
 
