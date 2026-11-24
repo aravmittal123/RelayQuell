@@ -1,0 +1,24 @@
+agent_runaway: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_runaway: model=gpt-4o
+agent_runaway: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_runaway: model=gpt-4o
+agent_runaway: MCP HTTP 429 {"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"AgentBreaker CIRCUIT_OPEN: tool blocked by Flagsmith policy","data":{"agent_id":"agent_runaway","tool":"charge_card","quarantined":true}}}
+agent_runaway: model=gpt-4o-mini
+agent_runaway: MCP HTTP 429 {"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"AgentBreaker CIRCUIT_OPEN: tool blocked by Flagsmith policy","data":{"agent_id":"agent_runaway","tool":"charge_card","quarantined":true}}}
+agent_runaway: model=gpt-4o-mini
+agent_healthy: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_healthy: model=gpt-4o
+agent_runaway: MCP HTTP 429 {"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"AgentBreaker CIRCUIT_OPEN: tool blocked by Flagsmith policy","data":{"agent_id":"agent_runaway","tool":"charge_card","quarantined":true}}}
+agent_runaway: model=gpt-4o-mini
+agent_healthy: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_healthy: model=gpt-4o
+agent_runaway: MCP HTTP 429 {"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"AgentBreaker CIRCUIT_OPEN: tool blocked by Flagsmith policy","data":{"agent_id":"agent_runaway","tool":"charge_card","quarantined":true}}}
+agent_runaway: model=gpt-4o-mini
+agent_healthy: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_healthy: model=gpt-4o
+agent_healthy: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_healthy: model=gpt-4o
+agent_healthy: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_healthy: model=gpt-4o
+agent_healthy: MCP HTTP 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"charge_card: success (simulation; no real payment)"}],"isError":false}}
+agent_healthy: model=gpt-4o

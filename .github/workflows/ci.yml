@@ -1,0 +1,48 @@
+name: AgentBreaker
+on: [push, pull_request]
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -e './gateway[dev]'
+      - run: ruff check gateway/ scripts/ demo/
+      - run: pytest -v gateway/tests/
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+  live-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -e './gateway[dev]'
+      - run: make up
+      - run: python scripts/verify_e2e.py
+      - if: always()
+        run: docker compose logs --tail 100
+      - if: always()
+        run: docker compose down -v

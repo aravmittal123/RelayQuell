@@ -1,0 +1,10 @@
+.venv/
+.env
+.env.runtime*
+node_modules/
+.next/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.tsbuildinfo
+evidence/*.json
