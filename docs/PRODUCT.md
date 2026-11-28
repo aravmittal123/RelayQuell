@@ -1,16 +1,16 @@
-# RelayQuell: runtime containment for tool-using agents
+# Vaeltrixis: runtime containment for tool-using agents
 
 ## The real problem
 
 An automation can repeat a tool call indefinitely, oscillate between tools, exhaust its token budget, or keep hitting a failing upstream. Operators need to contain the affected identity without shutting down unrelated work. They also need a way to change policy and recover without redeploying application code.
 
-RelayQuell targets platform teams operating internal tool-using agents. A useful first deployment is a trusted, single-gateway automation environment with the two supported tool schemas. Payments must still enforce their own idempotency: a loop detector is not transaction deduplication and cannot reverse calls already executed.
+Vaeltrixis targets platform teams operating internal tool-using agents. A useful first deployment is a trusted, single-gateway automation environment with the two supported tool schemas. Payments must still enforce their own idempotency: a loop detector is not transaction deduplication and cannot reverse calls already executed.
 
 ## Different from the existing AgentBreaker
 
-KageX describes its [AgentBreaker](https://kagex.ai/products/agentbreaker) as an AI red-team tool for prompt injection, jailbreaks and data leakage. Its [public repository](https://github.com/kagexai/agentbreaker) describes campaign generation, execution, scoring and reporting. RelayQuell does not reproduce those attack-generation features. It enforces operational containment in the request path, backed by self-hosted Flagsmith. These are complementary categories; no head-to-head performance or security superiority is claimed.
+KageX describes its [AgentBreaker](https://kagex.ai/products/agentbreaker) as an AI red-team tool for prompt injection, jailbreaks and data leakage. Its [public repository](https://github.com/kagexai/agentbreaker) describes campaign generation, execution, scoring and reporting. Vaeltrixis does not reproduce those attack-generation features. It enforces operational containment in the request path, backed by self-hosted Flagsmith. These are complementary categories; no head-to-head performance or security superiority is claimed.
 
-Name check on 24 November 2026: GitHub repository-name search for `RelayQuell` returned zero matches before this repository was renamed. Search availability does not establish trademark rights or domain availability.
+Name check on 28 November 2026: GitHub repository-name search for `Vaeltrixis` returned zero matches before this repository was renamed. Search availability does not establish trademark rights or domain availability.
 
 ## What an operator can do now
 

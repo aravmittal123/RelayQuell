@@ -1,8 +1,8 @@
-# RelayQuell
+# Vaeltrixis
 
 [Product positioning and policy rehearsal](docs/PRODUCT.md)
 
-![RelayQuell product overview](evidence/relayquell-home.jpg)
+![Vaeltrixis product overview](evidence/vaeltrixis-home.jpg)
 
 Start here: [configuration and integration guide](docs/CONFIGURATION.md). It explains which settings you change, which keys bootstrap generates, how to connect an existing agent, and the current deployment limits.
 
@@ -42,7 +42,7 @@ Bootstrap is idempotent: named resources are reused, current quarantine and oper
 
 ## Why this project
 
-RelayQuell contains operational failures during agent execution. It is distinct from red-team scanners that probe prompt injection or jailbreak vulnerabilities. The gateway isolates individual agents and uses self-hosted Flagsmith for persistent control and recovery.
+Vaeltrixis contains operational failures during agent execution. It is distinct from red-team scanners that probe prompt injection or jailbreak vulnerabilities. The gateway isolates individual agents and uses self-hosted Flagsmith for persistent control and recovery.
 
 The console is at `/console`; `/` is the product overview. `POST /api/policy/preview` compares the active policy with a candidate against up to 1,000 chronological tool calls, without upstream execution or flag writes. It currently simulates tool-loop behavior only. `GET /api/incidents` exports a bounded session incident index without tool arguments; it is not a durable audit log.
 

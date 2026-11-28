@@ -1,4 +1,6 @@
-# RelayQuell verification
+# Vaeltrixis verification
+
+Brand renamed to Vaeltrixis on 28 November 2026. Historical test reports below retain their original names and dates.
 
 ## RelayQuell revision: 24 November 2026
 

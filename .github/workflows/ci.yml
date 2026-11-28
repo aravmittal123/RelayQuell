@@ -1,4 +1,4 @@
-name: RelayQuell
+name: Vaeltrixis
 on: [push, pull_request]
 jobs:
   python:

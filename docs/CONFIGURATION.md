@@ -16,7 +16,7 @@ Before first startup run `python scripts/configure.py` (also done by `make up`).
 
 ## Connect an existing system
 
-RelayQuell sits between your agent and its upstream services. It is for teams running tool-using agents who need per-agent isolation, spending controls and model routing. It is not a model, agent framework, payment processor, or replacement for tool permissions.
+Vaeltrixis sits between your agent and its upstream services. It is for teams running tool-using agents who need per-agent isolation, spending controls and model routing. It is not a model, agent framework, payment processor, or replacement for tool permissions.
 
 Configure your upstream endpoints in `.env`:
 

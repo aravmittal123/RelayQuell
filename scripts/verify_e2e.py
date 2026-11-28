@@ -304,7 +304,7 @@ def main():
     )
     port = os.getenv("DASHBOARD_PORT", dotenv_values(ROOT / ".env").get("DASHBOARD_PORT", "3000"))
     dashboard = httpx.get(f"http://localhost:{port}", timeout=30)
-    check("AgentBreaker dashboard responds", dashboard.status_code == 200 and "RelayQuell" in dashboard.text)
+    check("AgentBreaker dashboard responds", dashboard.status_code == 200 and "Vaeltrixis" in dashboard.text)
     (ROOT / "evidence" / "e2e-results.json").write_text(
         json.dumps(
             {

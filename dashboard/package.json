@@ -1,5 +1,5 @@
 {
-  "name": "relayquell-dashboard",
+  "name": "vaeltrixis-dashboard",
   "version": "1.0.0",
   "private": true,
   "overrides": {"postcss": "8.5.33"},
